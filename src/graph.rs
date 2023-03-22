@@ -8,11 +8,7 @@ use std::{
 
 use nalgebra::{DMatrix, DVector, SymmetricEigen};
 
-use crate::{
-    betweenness::compute_betweenness,
-    closeness::compute_closeness,
-    edge::Edge,
-};
+use crate::{betweenness::compute_betweenness, closeness::compute_closeness, edge::Edge};
 
 // for performance reasons, we keep the
 // index size as small as possible
@@ -568,10 +564,15 @@ where
     /// in-between (i.e., not an end point), increment their betweenness value.
     /// Normalize the counts by dividing by the number of shortest paths found
     ///
-    pub fn betweenness_centrality(&mut self, num_threads: usize, normalize: bool) -> HashMap<T, f64> {
+    pub fn betweenness_centrality(
+        &mut self,
+        num_threads: usize,
+        normalize: bool,
+    ) -> HashMap<T, f64> {
         println!("betweenness_centrality normalize {normalize}");
         if self.betweenness_count.is_none() {
-            let betweenness_count = compute_betweenness(self.get_adjacency_indices(), num_threads, normalize);
+            let betweenness_count =
+                compute_betweenness(self.get_adjacency_indices(), num_threads, normalize);
             self.betweenness_count = Some(betweenness_count);
         }
 
@@ -1179,7 +1180,7 @@ mod tests {
         let between_map = graph.betweenness_centrality(1, false);
         let close_map = graph.closeness_centrality(1);
         const N: usize = 6;
-        let mut betweenness= [0.0; N];
+        let mut betweenness = [0.0; N];
         let mut closeness = [0.0; N];
         for i in 0..N {
             betweenness[i] = *between_map.get(&i).unwrap();
@@ -1190,7 +1191,7 @@ mod tests {
         let mut expected_closeness = [0.0; N];
         let expected_betweenness: [f64; 6] = [1.0, 1.5, 1.5, 2.5, 2.5, 0.0];
         for i in 0..N {
-            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
+            expected_closeness[i] = total_path_length[i] as f64 / (N - 1) as f64;
         }
 
         assert_eq!(betweenness, expected_betweenness);
@@ -1213,7 +1214,7 @@ mod tests {
         let between_map = graph.betweenness_centrality(1, true);
         let close_map = graph.closeness_centrality(1);
         const N: usize = 6;
-        let mut betweenness= [0.0; N];
+        let mut betweenness = [0.0; N];
         let mut closeness = [0.0; N];
         for i in 0..N {
             betweenness[i] = *between_map.get(&i).unwrap();
@@ -1223,9 +1224,9 @@ mod tests {
         let total_path_length = [9, 8, 8, 7, 7, 9];
         let mut expected_closeness = [0.0; N];
         let mut expected_betweenness = [1.0, 1.5, 1.5, 2.5, 2.5, 0.0];
-        const DIVISOR: f64 = ((N-1) * (N-2)/2) as f64;
+        const DIVISOR: f64 = ((N - 1) * (N - 2) / 2) as f64;
         for i in 0..N {
-            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
+            expected_closeness[i] = total_path_length[i] as f64 / (N - 1) as f64;
             expected_betweenness[i] /= DIVISOR;
         }
         assert_eq!(betweenness, expected_betweenness);
@@ -1258,7 +1259,7 @@ mod tests {
         let mut expected_closeness = [0.0; N];
         let expected_betweenness = [0.5, 9.5, 9.0, 2.0, 0.0, 2.0, 0.0];
         for i in 0..N {
-            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
+            expected_closeness[i] = total_path_length[i] as f64 / (N - 1) as f64;
         }
 
         assert_eq!(betweenness, expected_betweenness);
@@ -1290,8 +1291,8 @@ mod tests {
         let mut expected_closeness = [0.0; N];
         let mut expected_betweenness = [0.5, 9.5, 9.0, 2.0, 0.0, 2.0, 0.0];
         for i in 0..N {
-            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
-            expected_betweenness[i] /= ((N-1) * (N-2)/2) as f64;
+            expected_closeness[i] = total_path_length[i] as f64 / (N - 1) as f64;
+            expected_betweenness[i] /= ((N - 1) * (N - 2) / 2) as f64;
         }
 
         assert_eq!(betweenness, expected_betweenness);
@@ -1349,15 +1350,15 @@ mod tests {
         let b2 = betweenness_centrality2.get("65.21.141.242").unwrap();
         let c1 = closeness_centrality1.get(&0).unwrap();
         let c2 = closeness_centrality2.get("65.21.141.242").unwrap();
-        assert!( (b1-b2).abs() < 0.0000001);
-        assert!( (c1-c2).abs() < 0.0000001);
+        assert!((b1 - b2).abs() < 0.0000001);
+        assert!((c1 - c2).abs() < 0.0000001);
 
         let b3 = betweenness_centrality1.get(&1837).unwrap();
         let b4 = betweenness_centrality2.get("85.15.179.171").unwrap();
         let c3 = closeness_centrality1.get(&1837).unwrap();
         let c4 = closeness_centrality2.get("85.15.179.171").unwrap();
-        assert!( (b3-b4).abs() < 0.0000001);
-        assert!( (c3-c4).abs() < 0.0000001);
+        assert!((b3 - b4).abs() < 0.0000001);
+        assert!((c3 - c4).abs() < 0.0000001);
 
         // these should not be equal
         let b1 = betweenness_centrality1.get(&1836).unwrap();

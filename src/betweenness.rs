@@ -12,12 +12,14 @@ use crate::graph::GraphIndex;
 const MIN_NUM_THREADS: usize = 1;
 const MAX_NUM_THREADS: usize = 128;
 
-
-
 /// this is an implementation of Ulrik Brandes's
 /// A Faster Algorithm for Betweenness Centrality
 /// page 10, "Algorithm 1: Betweenness centrality in unweighted graphs"
-fn betweenness_for_node(index: usize, indices: &Vec<Vec<GraphIndex>>, betweenness_count: &mut [f64]) {
+fn betweenness_for_node(
+    index: usize,
+    indices: &Vec<Vec<GraphIndex>>,
+    betweenness_count: &mut [f64],
+) {
     let num_nodes = indices.len();
 
     let mut sigma: Vec<f64> = vec![0.0; num_nodes];
@@ -64,7 +66,6 @@ fn betweenness_for_node(index: usize, indices: &Vec<Vec<GraphIndex>>, betweennes
     }
 }
 
-
 /// this function is the thread task
 /// grabs next unprocessed node
 /// if no more nodes, exits
@@ -97,7 +98,6 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
     betweenness_count
 }
 
-
 /// This public function is called by the graph method
 /// closeness_centrality.  It does all
 /// the heavy lifting with processing the data via
@@ -107,7 +107,11 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
 /// - instantiating and spawning the threads
 /// - collecting the results when each is finished
 /// - added the results together, and returning them
-pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize, normalize: bool) -> Vec<f64> {
+pub fn compute_betweenness(
+    indices: Vec<Vec<GraphIndex>>,
+    mut num_threads: usize,
+    normalize: bool,
+) -> Vec<f64> {
     println!("compute betweennes normalize {normalize}");
     let start = Instant::now();
     num_threads = num_threads.clamp(MIN_NUM_THREADS, MAX_NUM_THREADS);
@@ -130,7 +134,7 @@ pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize
 
     let divisor: f64;
     if normalize {
-        divisor = ((num_nodes-1) * (num_nodes-2)) as f64;
+        divisor = ((num_nodes - 1) * (num_nodes - 2)) as f64;
     } else {
         // non-normalized: everything is counted twice, so we must divide by two
         divisor = 2.0;
