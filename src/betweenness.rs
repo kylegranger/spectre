@@ -107,7 +107,8 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
 /// - instantiating and spawning the threads
 /// - collecting the results when each is finished
 /// - added the results together, and returning them
-pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) -> Vec<f64> {
+pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize, normalize: bool) -> Vec<f64> {
+    println!("compute betweennes normalize {normalize}");
     let start = Instant::now();
     num_threads = num_threads.clamp(MIN_NUM_THREADS, MAX_NUM_THREADS);
     println!("\ncompute_betweenness: num_threads {:?}", num_threads);
@@ -127,12 +128,17 @@ pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize
         handles.push(handle);
     }
 
+    let divisor: f64;
+    if normalize {
+        divisor = ((num_nodes-1) * (num_nodes-2)) as f64;
+    } else {
+        // non-normalized: everything is counted twice, so we must divide by two
+        divisor = 2.0;
+    }
     for h in handles {
         let b = h.join().unwrap();
-
         for i in 0..num_nodes {
-            // everything is counted twice -- must divide by two
-            betweenness_count[i] += b[i] / 2.0;
+            betweenness_count[i] += b[i] / divisor;
         }
     }
 

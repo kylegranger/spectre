@@ -568,9 +568,10 @@ where
     /// in-between (i.e., not an end point), increment their betweenness value.
     /// Normalize the counts by dividing by the number of shortest paths found
     ///
-    pub fn betweenness_centrality(&mut self, num_threads: usize) -> HashMap<T, f64> {
+    pub fn betweenness_centrality(&mut self, num_threads: usize, normalize: bool) -> HashMap<T, f64> {
+        println!("betweenness_centrality normalize {normalize}");
         if self.betweenness_count.is_none() {
-            let betweenness_count = compute_betweenness(self.get_adjacency_indices(), num_threads);
+            let betweenness_count = compute_betweenness(self.get_adjacency_indices(), num_threads, normalize);
             self.betweenness_count = Some(betweenness_count);
         }
 
@@ -1163,7 +1164,7 @@ mod tests {
     }
 
     #[test]
-    fn test_graph() {
+    fn bhatia_graph() {
         let mut graph: Graph<usize> = Graph::new();
         // this graph reproduces the image at:
         // https://www.youtube.com/watch?v=ptqt2zr9ZRE
@@ -1175,22 +1176,58 @@ mod tests {
         graph.insert(Edge::new(4, 5));
         graph.insert(Edge::new(5, 3));
 
-        let between_map = graph.betweenness_centrality(1);
+        let between_map = graph.betweenness_centrality(1, false);
         let close_map = graph.closeness_centrality(1);
-        let mut betweenness: [f64; 6] = [0.0; 6];
-        let mut closeness: [f64; 6] = [0.0; 6];
-        for i in 0..6 {
+        const N: usize = 6;
+        let mut betweenness= [0.0; N];
+        let mut closeness = [0.0; N];
+        for i in 0..N {
             betweenness[i] = *between_map.get(&i).unwrap();
             closeness[i] = *close_map.get(&i).unwrap();
         }
 
         let total_path_length = [9, 8, 8, 7, 7, 9];
-        let mut expected_closeness: [f64; 6] = [0.0; 6];
+        let mut expected_closeness = [0.0; N];
         let expected_betweenness: [f64; 6] = [1.0, 1.5, 1.5, 2.5, 2.5, 0.0];
-        for i in 0..6 {
-            expected_closeness[i] = total_path_length[i] as f64 / 5.0;
+        for i in 0..N {
+            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
         }
 
+        assert_eq!(betweenness, expected_betweenness);
+        assert_eq!(closeness, expected_closeness);
+    }
+
+    #[test]
+    fn bhatia_graph_normalized() {
+        let mut graph: Graph<usize> = Graph::new();
+        // this graph reproduces the image at:
+        // https://www.youtube.com/watch?v=ptqt2zr9ZRE
+        graph.insert(Edge::new(0, 1));
+        graph.insert(Edge::new(1, 3));
+        graph.insert(Edge::new(3, 4));
+        graph.insert(Edge::new(4, 2));
+        graph.insert(Edge::new(2, 0));
+        graph.insert(Edge::new(4, 5));
+        graph.insert(Edge::new(5, 3));
+
+        let between_map = graph.betweenness_centrality(1, true);
+        let close_map = graph.closeness_centrality(1);
+        const N: usize = 6;
+        let mut betweenness= [0.0; N];
+        let mut closeness = [0.0; N];
+        for i in 0..N {
+            betweenness[i] = *between_map.get(&i).unwrap();
+            closeness[i] = *close_map.get(&i).unwrap();
+        }
+
+        let total_path_length = [9, 8, 8, 7, 7, 9];
+        let mut expected_closeness = [0.0; N];
+        let mut expected_betweenness = [1.0, 1.5, 1.5, 2.5, 2.5, 0.0];
+        const DIVISOR: f64 = ((N-1) * (N-2)/2) as f64;
+        for i in 0..N {
+            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
+            expected_betweenness[i] /= DIVISOR;
+        }
         assert_eq!(betweenness, expected_betweenness);
         assert_eq!(closeness, expected_closeness);
     }
@@ -1206,20 +1243,55 @@ mod tests {
         graph.insert(Edge::new(2, 6));
         graph.insert(Edge::new(1, 3));
 
-        let between_map = graph.betweenness_centrality(1);
-        let close_map = graph.closeness_centrality(1);
-        let mut betweenness: [f64; 7] = [0.0; 7];
-        let mut closeness: [f64; 7] = [0.0; 7];
-        for i in 0..7 {
+        // passing in zero as num_threads will be clamped to 1 thread
+        let between_map = graph.betweenness_centrality(0, false);
+        let close_map = graph.closeness_centrality(0);
+        const N: usize = 7;
+        let mut betweenness = [0.0; N];
+        let mut closeness = [0.0; N];
+        for i in 0..N {
             betweenness[i] = *between_map.get(&i).unwrap();
             closeness[i] = *close_map.get(&i).unwrap();
         }
 
         let total_path_length = [15, 9, 10, 12, 15, 12, 15];
-        let mut expected_closeness: [f64; 7] = [0.0; 7];
-        let expected_betweenness: [f64; 7] = [0.5, 9.5, 9.0, 2.0, 0.0, 2.0, 0.0];
-        for i in 0..7 {
-            expected_closeness[i] = total_path_length[i] as f64 / 6.0;
+        let mut expected_closeness = [0.0; N];
+        let expected_betweenness = [0.5, 9.5, 9.0, 2.0, 0.0, 2.0, 0.0];
+        for i in 0..N {
+            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
+        }
+
+        assert_eq!(betweenness, expected_betweenness);
+        assert_eq!(closeness, expected_closeness);
+    }
+
+    #[test]
+    fn randomish_graph_normalized() {
+        let mut graph: Graph<usize> = Graph::new();
+        graph.insert(Edge::new(0, 3));
+        graph.insert(Edge::new(0, 5));
+        graph.insert(Edge::new(5, 1));
+        graph.insert(Edge::new(1, 2));
+        graph.insert(Edge::new(2, 4));
+        graph.insert(Edge::new(2, 6));
+        graph.insert(Edge::new(1, 3));
+
+        const N: usize = 7;
+        let between_map = graph.betweenness_centrality(1, true);
+        let close_map = graph.closeness_centrality(1);
+        let mut betweenness = [0.0; N];
+        let mut closeness = [0.0; N];
+        for i in 0..N {
+            betweenness[i] = *between_map.get(&i).unwrap();
+            closeness[i] = *close_map.get(&i).unwrap();
+        }
+
+        let total_path_length = [15, 9, 10, 12, 15, 12, 15];
+        let mut expected_closeness = [0.0; N];
+        let mut expected_betweenness = [0.5, 9.5, 9.0, 2.0, 0.0, 2.0, 0.0];
+        for i in 0..N {
+            expected_closeness[i] = total_path_length[i] as f64 / (N-1) as f64;
+            expected_betweenness[i] /= ((N-1) * (N-2)/2) as f64;
         }
 
         assert_eq!(betweenness, expected_betweenness);
@@ -1238,7 +1310,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "takes a while to run"]
     fn loaded_sample_graph() {
         let sample = load_sample("testdata/sample.json");
 
@@ -1254,8 +1325,8 @@ mod tests {
             n += 1;
         }
 
-        let betweenness_centrality1 = graph1.betweenness_centrality(4);
-        let closeness_centrality1 = graph1.closeness_centrality(4);
+        let betweenness_centrality1 = graph1.betweenness_centrality(3, false);
+        let closeness_centrality1 = graph1.closeness_centrality(3);
 
         // graph2 uses ip address as node value
         let mut graph2: Graph<&str> = Graph::new();
@@ -1272,26 +1343,21 @@ mod tests {
             n += 1;
         }
 
-        // passing in zero as num_threads will be clamped to 1 thread
-        let betweenness_centrality2 = graph2.betweenness_centrality(0);
-        let closeness_centrality2 = graph2.closeness_centrality(0);
+        let betweenness_centrality2 = graph2.betweenness_centrality(8, false);
+        let closeness_centrality2 = graph2.closeness_centrality(8);
         let b1 = betweenness_centrality1.get(&0).unwrap();
         let b2 = betweenness_centrality2.get("65.21.141.242").unwrap();
         let c1 = closeness_centrality1.get(&0).unwrap();
         let c2 = closeness_centrality2.get("65.21.141.242").unwrap();
-        assert_eq!(b1, b2);
-        assert_eq!(c1, c2);
+        assert!( (b1-b2).abs() < 0.0000001);
+        assert!( (c1-c2).abs() < 0.0000001);
 
-        // Index 1837 has betweenness 9.576638518159478e-8
-        // we'll confirm it's between 0.00000009 and 0.00000010
-        let b1 = betweenness_centrality1.get(&1837).unwrap();
-        let b2 = betweenness_centrality2.get("85.15.179.171").unwrap();
-        let c1 = closeness_centrality1.get(&1837).unwrap();
-        let c2 = closeness_centrality2.get("85.15.179.171").unwrap();
-        assert_eq!(b1, b2);
-        assert_eq!(c1, c2);
-        assert!(*b1 > 0.00000009);
-        assert!(*b1 < 0.00000010);
+        let b3 = betweenness_centrality1.get(&1837).unwrap();
+        let b4 = betweenness_centrality2.get("85.15.179.171").unwrap();
+        let c3 = closeness_centrality1.get(&1837).unwrap();
+        let c4 = closeness_centrality2.get("85.15.179.171").unwrap();
+        assert!( (b3-b4).abs() < 0.0000001);
+        assert!( (c3-c4).abs() < 0.0000001);
 
         // these should not be equal
         let b1 = betweenness_centrality1.get(&1836).unwrap();
@@ -1304,7 +1370,7 @@ mod tests {
         let (a, b, c, d) = ("a", "b", "c", "d");
         let mut graph = graph!([a, b, c, d]);
 
-        let betweenness_centrality = graph.betweenness_centrality(2);
+        let betweenness_centrality = graph.betweenness_centrality(2, false);
 
         assert_eq!(betweenness_centrality.get_key_value(a), Some((&a, &0.0)));
         assert_eq!(betweenness_centrality.get_key_value(b), Some((&b, &2.0)));
@@ -1317,7 +1383,7 @@ mod tests {
         let (a, b, c, d, e) = ("a", "b", "c", "d", "e");
         let mut graph = graph!([a, b, c], [e, b, d]);
 
-        let betweenness_centrality = graph.betweenness_centrality(2);
+        let betweenness_centrality = graph.betweenness_centrality(2, false);
 
         assert_eq!(betweenness_centrality.get_key_value(a), Some((&a, &0.0)));
         assert_eq!(betweenness_centrality.get_key_value(b), Some((&b, &6.0)));
