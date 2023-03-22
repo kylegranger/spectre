@@ -483,7 +483,7 @@ where
 
     /// This method returns a set connection indices for each node.
     /// It a compact way to view the adjacency matrix, and therefore, is
-    /// used for the computation of betweenness and closeness centralities
+    /// used for the computation of betweenness and closeness centralities.
     pub fn get_adjacency_indices(&mut self) -> Vec<Vec<GraphIndex>> {
         let mut indices: Vec<Vec<GraphIndex>> = Vec::new();
         let adjacency_matrix = self.adjacency_matrix();

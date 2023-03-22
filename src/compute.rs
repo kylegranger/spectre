@@ -12,82 +12,75 @@ use crate::graph::GraphIndex;
 const MIN_NUM_THREADS: usize = 1;
 const MAX_NUM_THREADS: usize = 128;
 
-fn betweenness_for_node(s: usize, indices: &Vec<Vec<GraphIndex>>, betweenness_count: &mut [f64]) {
-    let num_nodes = indices.len();
-    // println!("\nDOING s {s}");
 
-    let mut sp: Vec<f64> = vec![0.0; num_nodes];
-    let mut d: Vec<usize> = vec![num_nodes + 1; num_nodes];
+
+/// this is an implementation of Ulrik Brandes's
+/// A Faster Algorithm for Betweenness Centrality
+/// page 10, "Algorithm 1: Betweenness centrality in unweighted graphs"
+fn betweenness_for_node(index: usize, indices: &Vec<Vec<GraphIndex>>, betweenness_count: &mut [f64]) {
+    let num_nodes = indices.len();
+
+    let mut sigma: Vec<f64> = vec![0.0; num_nodes];
+    let mut distance: Vec<usize> = vec![num_nodes + 1; num_nodes];
     let mut totals: Vec<Vec<usize>> = vec![Vec::<usize>::new(); num_nodes];
     let mut delta: Vec<f64> = vec![0.0; num_nodes];
     let mut queue: VecDeque<usize> = VecDeque::new();
     let mut stack: Vec<usize> = Vec::new();
-    let mut v: usize;
-    let mut w: usize;
 
-    sp[s] = 1.0;
-    d[s] = 0;
-    queue.push_back(s);
+    sigma[index] = 1.0;
+    distance[index] = 0;
+    queue.push_back(index);
 
     while !queue.is_empty() {
-        v = *queue.front().unwrap();
+        let v = *queue.front().unwrap();
         queue.pop_front();
         stack.push(v);
 
-        let z: usize = indices[v].len();
-        // println!("v {v}, z {z}");
-        for i in 0..z {
+        let len: usize = indices[v].len();
+        for i in 0..len {
             let w: usize = indices[v][i] as usize;
-            if d[w] == num_nodes + 1 {
-                d[w] = d[v] + 1;
-                // println!("  push w {w} tp Q");
+            if distance[w] == num_nodes + 1 {
+                distance[w] = distance[v] + 1;
                 queue.push_back(w);
             }
-            if d[w] == d[v] + 1 {
-                sp[w] += sp[v];
+            if distance[w] == distance[v] + 1 {
+                sigma[w] += sigma[v];
                 totals[w].push(v);
             }
         }
     }
 
-    // println!("s {s}, S size is {}", stack.len());
     while !stack.is_empty() {
-        w = stack[stack.len() - 1];
+        let w = stack[stack.len() - 1];
         stack.pop();
 
-        // println!("  w {w}, P[w].len() {}", totals[w].len());
         for j in 0..totals[w].len() {
-            v = totals[w][j];
-            delta[v] += sp[v] / sp[w] * (1.0 + delta[w]);
+            let v = totals[w][j];
+            delta[v] += sigma[v] / sigma[w] * (1.0 + delta[w]);
         }
-        if w != s {
+        if w != index {
             betweenness_count[w] += delta[w];
         }
     }
-
-    // println!("s {s}, total {total}");
-    // total_path_length[s] = total as u32;
 }
 
-fn closeness_for_node(s: usize, indices: &Vec<Vec<GraphIndex>>, total_path_length: &mut [u32]) {
+fn closeness_for_node(index: usize, indices: &Vec<Vec<GraphIndex>>, total_path_length: &mut [u32]) {
     let num_nodes = indices.len();
 
-    let mut q: VecDeque<usize> = VecDeque::new();
+    let mut queue: VecDeque<usize> = VecDeque::new();
     let mut deltas: Vec<i32> = vec![-1; num_nodes];
 
-    deltas[s] = 0;
-    q.push_back(s);
+    deltas[index] = 0;
+    queue.push_back(index);
 
-    while !q.is_empty() {
-        let current = *q.front().unwrap();
-        q.pop_front();
-        let z = indices[current].len();
-        for j in 0..z {
+    while !queue.is_empty() {
+        let current = *queue.front().unwrap();
+        queue.pop_front();
+        let len = indices[current].len();
+        for j in 0..len {
             if deltas[indices[current][j] as usize] == -1 {
                 deltas[indices[current][j] as usize] = deltas[current] + 1;
-                q.push_back(indices[current][j] as usize);
-                // total += dd[indices[current][j] as usize];
-                // println!("  inc index {} by {}", indices[current][j], dd[indices[current][j] as usize]);
+                queue.push_back(indices[current][j] as usize);
                 total_path_length[indices[current][j] as usize] +=
                     deltas[indices[current][j] as usize] as u32;
             }
@@ -98,7 +91,7 @@ fn closeness_for_node(s: usize, indices: &Vec<Vec<GraphIndex>>, total_path_lengt
 /// this function is the thread task
 /// grabs next unprocessed node
 /// if no more nodes, exits
-/// returning betweenness, total path lengths, and num paths
+/// returning betweenness
 fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>>>) -> Vec<f64> {
     let start = Instant::now();
     let indices = &aindices;
@@ -108,7 +101,6 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
     // these are returned when the thread finishes
     // and then summed by the caller
     let mut betweenness_count: Vec<f64> = vec![0.0; num_nodes];
-    // let mut total_path_length: Vec<u32> = vec![0; num_nodes];
 
     let mut finished = false;
     while !finished {
@@ -131,7 +123,7 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
 /// this function is the thread task
 /// grabs next unprocessed node
 /// if no more nodes, exits
-/// returning betweenness, total path lengths, and num paths
+/// returning total path lengths
 fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>>>) -> Vec<u32> {
     let start = Instant::now();
     let indices = &aindices;
@@ -140,7 +132,6 @@ fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>
     // each worker thread keeps its own cache of data
     // these are returned when the thread finishes
     // and then summed by the caller
-    // let mut betweenness_count: Vec<f64> = vec![0.0; num_nodes];
     let mut total_path_length: Vec<u32> = vec![0; num_nodes];
 
     let mut finished = false;
@@ -162,7 +153,7 @@ fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>
 }
 
 /// This public function is called by the graph method
-/// betweenness_and_closeness_centrality.  It does all
+/// closeness_centrality.  It does all
 /// the heavy lifting with processing the data via
 /// multiple threads
 /// It is reponsibility for:
@@ -178,7 +169,6 @@ pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize
     let num_nodes = indices.len();
 
     let mut betweenness_count: Vec<f64> = vec![0.0; num_nodes];
-    // let mut total_path_length: Vec<u32> = vec![0; num_nodes];
 
     let mut handles = Vec::with_capacity(num_threads);
     let wrapped_indices = Arc::new(indices);
@@ -195,12 +185,12 @@ pub fn compute_betweenness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize
         let b = h.join().unwrap();
 
         for i in 0..num_nodes {
+            // everything is counted twice -- must divide by two
             betweenness_count[i] += b[i] / 2.0;
-            // total_path_length[i] += t[i];
         }
     }
 
-    println!("compute: done {:?}", start.elapsed());
+    println!("compute_betweenness: done {:?}", start.elapsed());
 
     betweenness_count
 }
@@ -212,7 +202,6 @@ pub fn compute_closeness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) 
 
     let num_nodes = indices.len();
 
-    // let mut betweenness_count: Vec<f64> = vec![0.0; num_nodes];
     let mut total_path_length: Vec<u32> = vec![0; num_nodes];
 
     let mut handles = Vec::with_capacity(num_threads);
@@ -230,12 +219,11 @@ pub fn compute_closeness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) 
         let t = h.join().unwrap();
 
         for i in 0..num_nodes {
-            // betweenness_count[i] += b[i] / 2.0;
             total_path_length[i] += t[i];
         }
     }
 
-    println!("compute: done {:?}", start.elapsed());
+    println!("ncompute_closeness: done {:?}", start.elapsed());
 
     total_path_length
 }
