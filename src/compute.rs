@@ -4,6 +4,7 @@ use std::{
     sync::{Arc, Mutex},
     thread,
     time::Instant,
+    collections::VecDeque,
 };
 
 use crate::graph::GraphIndex;
@@ -15,7 +16,7 @@ const MAX_NUM_THREADS: usize = 128;
 /// In addition to counting betweenness attributes, path
 /// lengths and counts are recorded, for quick access
 /// to closeness centrality data
-fn betweenness_for_node(
+fn _betweenness_for_node(
     index: usize,
     indices: &Vec<Vec<GraphIndex>>,
     betweenness_count: &mut [f64],
@@ -148,6 +149,66 @@ fn betweenness_for_node(
     }
 }
 
+fn betweenness_brandes(
+    s: usize,
+    indices: &Vec<Vec<GraphIndex>>,
+    betweenness_count: &mut [f64],
+    _total_path_length: &mut [u32],
+) {
+    let num_nodes = indices.len();
+    println!("\nDOING s {s}");
+
+    let mut sp: Vec<f64> = vec![0.0; num_nodes];
+    let mut d: Vec<usize> = vec![num_nodes+1; num_nodes];
+    let mut totals: Vec<Vec<usize>> = vec![Vec::<usize>::new(); num_nodes];
+    let mut delta: Vec<f64> = vec![0.0; num_nodes];
+    let mut queue: VecDeque<usize> = VecDeque::new();
+    let mut stack: Vec<usize> = Vec::new();
+    let mut v: usize;
+    let mut w: usize;
+
+    sp[s] = 1.0;
+    d[s] = 0;
+    queue.push_back(s);
+
+    while !queue.is_empty() {
+         v = *queue.front().unwrap();
+         queue.pop_front();
+         stack.push(v);
+
+        let z: usize = indices[v].len();
+        println!("v {v}, z {z}");
+        for i in 0..z {
+            let w: usize = indices[v][i] as usize;
+            if d[w] == num_nodes + 1 {
+                d[w] = d[v] + 1;
+                println!("  push w {w} tp Q");
+                queue.push_back(w);
+            }
+            if d[w] == d[v] + 1 {
+                sp[w] += sp[v];
+                totals[w].push(v);
+            }
+        }
+    }
+
+    println!("s {s}, S size is {}", stack.len());
+    while !stack.is_empty() {
+        w = stack[stack.len()-1];
+        stack.pop();
+
+        println!("  w {w}, P[w].len() {}", totals[w].len());
+        for j in 0..totals[w].len() {
+            v = totals[w][j];
+            delta[v] += (sp[v] as f64 / sp[w] as f64) * (1.0 + delta[w]);
+        }
+        if w != s {
+            betweenness_count[w] += delta[w];
+        }
+    }
+
+}
+
 /// this function is the thread task
 /// grabs next unprocessed node
 /// if no more nodes, exits
@@ -172,11 +233,11 @@ fn betweenness_task(
         let index: usize = *counter;
         *counter += 1;
         drop(counter);
-        if index < num_nodes - 1 {
-            if index % 100 == 0 {
+        if index < num_nodes {
+                if index % 100 == 0 {
                 println!("node: {}, time: {:?}", index, start.elapsed());
             }
-            betweenness_for_node(
+            betweenness_brandes(
                 index,
                 indices,
                 &mut betweenness_count,
@@ -226,7 +287,7 @@ pub fn compute_betweenness(
         let (b, t) = h.join().unwrap();
 
         for i in 0..num_nodes {
-            betweenness_count[i] += b[i];
+            betweenness_count[i] += b[i] / 2.0;
             total_path_length[i] += t[i];
         }
     }
