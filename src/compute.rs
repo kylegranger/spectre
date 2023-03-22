@@ -156,7 +156,7 @@ fn betweenness_brandes(
     _total_path_length: &mut [u32],
 ) {
     let num_nodes = indices.len();
-    println!("\nDOING s {s}");
+    // println!("\nDOING s {s}");
 
     let mut sp: Vec<f64> = vec![0.0; num_nodes];
     let mut d: Vec<usize> = vec![num_nodes+1; num_nodes];
@@ -177,12 +177,12 @@ fn betweenness_brandes(
          stack.push(v);
 
         let z: usize = indices[v].len();
-        println!("v {v}, z {z}");
+        // println!("v {v}, z {z}");
         for i in 0..z {
             let w: usize = indices[v][i] as usize;
             if d[w] == num_nodes + 1 {
                 d[w] = d[v] + 1;
-                println!("  push w {w} tp Q");
+                // println!("  push w {w} tp Q");
                 queue.push_back(w);
             }
             if d[w] == d[v] + 1 {
@@ -192,12 +192,12 @@ fn betweenness_brandes(
         }
     }
 
-    println!("s {s}, S size is {}", stack.len());
+    // println!("s {s}, S size is {}", stack.len());
     while !stack.is_empty() {
         w = stack[stack.len()-1];
         stack.pop();
 
-        println!("  w {w}, P[w].len() {}", totals[w].len());
+        // println!("  w {w}, P[w].len() {}", totals[w].len());
         for j in 0..totals[w].len() {
             v = totals[w][j];
             delta[v] += (sp[v] as f64 / sp[w] as f64) * (1.0 + delta[w]);
