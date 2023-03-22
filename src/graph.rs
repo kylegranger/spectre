@@ -9,7 +9,8 @@ use std::{
 use nalgebra::{DMatrix, DVector, SymmetricEigen};
 
 use crate::{
-    compute::{compute_betweenness, compute_closeness},
+    betweenness::compute_betweenness,
+    closeness::compute_closeness,
     edge::Edge,
 };
 
