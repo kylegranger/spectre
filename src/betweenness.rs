@@ -132,13 +132,12 @@ pub fn compute_betweenness(
         handles.push(handle);
     }
 
-    let divisor: f64;
-    if normalize {
-        divisor = ((num_nodes - 1) * (num_nodes - 2)) as f64;
+    let divisor: f64 = if normalize {
+        ((num_nodes - 1) * (num_nodes - 2)) as f64
     } else {
         // non-normalized: everything is counted twice, so we must divide by two
-        divisor = 2.0;
-    }
+        2.0
+    };
     for h in handles {
         let b = h.join().unwrap();
         for i in 0..num_nodes {
