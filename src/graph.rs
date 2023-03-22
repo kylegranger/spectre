@@ -8,7 +8,10 @@ use std::{
 
 use nalgebra::{DMatrix, DVector, SymmetricEigen};
 
-use crate::{compute::compute_betweenness, edge::Edge};
+use crate::{
+    compute::{compute_betweenness, compute_closeness},
+    edge::Edge,
+};
 
 // for performance reasons, we keep the
 // index size as small as possible
@@ -546,17 +549,17 @@ where
     /// in-between (i.e., not an end point), increment their betweenness value.
     /// Normalize the counts by dividing by the number of shortest paths found
     ///
-    fn betweenness_and_closeness_centrality(&mut self, num_threads: usize) {
-        if self.betweenness_count.is_some() {
-            return;
-        }
+    // fn betweenness_and_closeness_centrality(&mut self, num_threads: usize) {
+    //     if self.betweenness_count.is_some() {
+    //         return;
+    //     }
 
-        let (betweenness_count, total_path_length) =
-            compute_betweenness(self.get_adjacency_indices(), num_threads);
+    //     let (betweenness_count, total_path_length) =
+    //         compute_betweenness(self.get_adjacency_indices(), num_threads);
 
-        self.betweenness_count = Some(betweenness_count);
-        self.total_path_length = Some(total_path_length);
-    }
+    //     self.betweenness_count = Some(betweenness_count);
+    //     self.total_path_length = Some(total_path_length);
+    // }
 
     /// This method returns the betweenness for a given Graph.
     ///
@@ -565,7 +568,10 @@ where
     /// Normalize the counts by dividing by the number of shortest paths found
     ///
     pub fn betweenness_centrality(&mut self, num_threads: usize) -> HashMap<T, f64> {
-        self.betweenness_and_closeness_centrality(num_threads);
+        if self.betweenness_count.is_none() {
+            let betweenness_count = compute_betweenness(self.get_adjacency_indices(), num_threads);
+            self.betweenness_count = Some(betweenness_count);
+        }
 
         let betweenness_count = self.betweenness_count.as_ref().unwrap();
 
@@ -583,7 +589,11 @@ where
     /// Accumulate all path lengths, accumulate number of paths, and then compute
     /// average path length.
     pub fn closeness_centrality(&mut self, num_threads: usize) -> HashMap<T, f64> {
-        self.betweenness_and_closeness_centrality(num_threads);
+        // self.betweenness_and_closeness_centrality(num_threads);
+        if self.total_path_length.is_none() {
+            let total_path_length = compute_closeness(self.get_adjacency_indices(), num_threads);
+            self.total_path_length = Some(total_path_length);
+        }
 
         let total_path_length = self.total_path_length.as_ref().unwrap();
 
