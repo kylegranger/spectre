@@ -153,7 +153,7 @@ fn betweenness_brandes(
     s: usize,
     indices: &Vec<Vec<GraphIndex>>,
     betweenness_count: &mut [f64],
-    _total_path_length: &mut [u32],
+    total_path_length: &mut [u32],
 ) {
     let num_nodes = indices.len();
     // println!("\nDOING s {s}");
@@ -206,6 +206,29 @@ fn betweenness_brandes(
             betweenness_count[w] += delta[w];
         }
     }
+
+    let mut q: VecDeque<usize> = VecDeque::new();
+    let mut dd: Vec<i32> = vec![-1; num_nodes];
+
+    dd[s] = 0;
+    q.push_back(s);
+
+    while !q.is_empty() {
+        let current = *q.front().unwrap();
+        q.pop_front();
+        let z = indices[current].len();
+        for j in 0..z {
+            if dd[indices[current][j] as usize] == -1 {
+                dd[indices[current][j] as usize] = dd[current] + 1;
+                q.push_back(indices[current][j] as usize);
+                // total += dd[indices[current][j] as usize];
+                // println!("  inc index {} by {}", indices[current][j], dd[indices[current][j] as usize]);
+                total_path_length[indices[current][j] as usize] += dd[indices[current][j] as usize] as u32;
+            }
+        }
+    }
+    // println!("s {s}, total {total}");
+    // total_path_length[s] = total as u32;
 
 }
 
