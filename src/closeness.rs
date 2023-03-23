@@ -96,7 +96,7 @@ pub fn compute_closeness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) 
         }
     }
 
-    println!("ncompute_closeness: done {:?}", start.elapsed());
+    println!("\ncompute_closeness: done {:?}", start.elapsed());
 
     total_path_length
 }

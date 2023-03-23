@@ -38,13 +38,10 @@ fn betweenness_for_node(
         let v = queue.pop_front().unwrap();
         stack.push(v);
 
-        // let len: usize = indices[v].len();
         for w in &indices[v] {
-            // let w: usize = indices[v][i] as usize;
-            // let w_usize = *w as usize;
             if distance[*w as usize] == num_nodes + 1 {
                 distance[*w as usize] = distance[v] + 1;
-                queue.push_back(*w as usize );
+                queue.push_back(*w as usize);
             }
             if distance[*w as usize] == distance[v] + 1 {
                 sigma[*w as usize] += sigma[v];
