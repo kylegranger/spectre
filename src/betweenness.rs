@@ -14,6 +14,7 @@ const MAX_NUM_THREADS: usize = 128;
 
 /// this is an implementation of Ulrik Brandes's
 /// A Faster Algorithm for Betweenness Centrality
+/// http://snap.stanford.edu/class/cs224w-readings/brandes01centrality.pdf
 /// page 10, "Algorithm 1: Betweenness centrality in unweighted graphs"
 fn betweenness_for_node(
     index: usize,
@@ -34,20 +35,20 @@ fn betweenness_for_node(
     queue.push_back(index);
 
     while !queue.is_empty() {
-        let v = *queue.front().unwrap();
-        queue.pop_front();
+        let v = queue.pop_front().unwrap();
         stack.push(v);
 
-        let len: usize = indices[v].len();
-        for i in 0..len {
-            let w: usize = indices[v][i] as usize;
-            if distance[w] == num_nodes + 1 {
-                distance[w] = distance[v] + 1;
-                queue.push_back(w);
+        // let len: usize = indices[v].len();
+        for w in &indices[v] {
+            // let w: usize = indices[v][i] as usize;
+            // let w_usize = *w as usize;
+            if distance[*w as usize] == num_nodes + 1 {
+                distance[*w as usize] = distance[v] + 1;
+                queue.push_back(*w as usize );
             }
-            if distance[w] == distance[v] + 1 {
-                sigma[w] += sigma[v];
-                totals[w].push(v);
+            if distance[*w as usize] == distance[v] + 1 {
+                sigma[*w as usize] += sigma[v];
+                totals[*w as usize].push(v);
             }
         }
     }
