@@ -569,7 +569,6 @@ where
         num_threads: usize,
         normalize: bool,
     ) -> HashMap<T, f64> {
-        println!("betweenness_centrality normalize {normalize}");
         if self.betweenness_count.is_none() {
             let betweenness_count =
                 compute_betweenness(self.get_adjacency_indices(), num_threads, normalize);

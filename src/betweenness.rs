@@ -85,9 +85,6 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
         *counter += 1;
         drop(counter);
         if index < num_nodes {
-            if index % 100 == 0 {
-                println!("node: {}, time: {:?}", index, start.elapsed());
-            }
             betweenness_for_node(index, indices, &mut betweenness_count);
         } else {
             finished = true;
@@ -96,24 +93,23 @@ fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphInde
     betweenness_count
 }
 
-/// This public function is called by the graph method
+/// This function is called by the graph method
 /// closeness_centrality.  It does all
 /// the heavy lifting with processing the data via
-/// multiple threads
+/// multiple threads.
 /// It is reponsibility for:
 /// - setting up the data to be passed to the threads
 /// - instantiating and spawning the threads
 /// - collecting the results when each is finished
 /// - added the results together, and returning them
+/// It public for graph, but is not exposed in the public library interface.
 pub fn compute_betweenness(
     indices: Vec<Vec<GraphIndex>>,
     mut num_threads: usize,
     normalize: bool,
 ) -> Vec<f64> {
-    println!("compute betweennes normalize {normalize}");
     let start = Instant::now();
     num_threads = num_threads.clamp(MIN_NUM_THREADS, MAX_NUM_THREADS);
-    println!("\ncompute_betweenness: num_threads {:?}", num_threads);
 
     let num_nodes = indices.len();
 
@@ -142,8 +138,6 @@ pub fn compute_betweenness(
             betweenness_count[i] += b[i] / divisor;
         }
     }
-
-    println!("compute_betweenness: done {:?}", start.elapsed());
 
     betweenness_count
 }

@@ -12,6 +12,9 @@ use crate::graph::GraphIndex;
 const MIN_NUM_THREADS: usize = 1;
 const MAX_NUM_THREADS: usize = 128;
 
+/// this does a BFS (breadth first search) for a given node.
+/// it finds the shortest paths to all other nodes, summing
+/// the lengths in a node-indexed array that is passed in
 fn closeness_for_node(index: usize, indices: &Vec<Vec<GraphIndex>>, total_path_length: &mut [u32]) {
     let num_nodes = indices.len();
 
@@ -57,9 +60,6 @@ fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>
         *counter += 1;
         drop(counter);
         if index < num_nodes {
-            if index % 100 == 0 {
-                println!("node: {}, time: {:?}", index, start.elapsed());
-            }
             closeness_for_node(index, indices, &mut total_path_length);
         } else {
             finished = true;
@@ -68,10 +68,19 @@ fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>
     total_path_length
 }
 
+/// This function is called by the graph method
+/// closeness_centrality.  It does all
+/// the heavy lifting with processing the data via
+/// multiple threads.
+/// It is reponsibility for:
+/// - setting up the data to be passed to the threads
+/// - instantiating and spawning the threads
+/// - collecting the results when each is finished
+/// - added the results together, and returning them
+/// It public for graph, but is not exposed in the public library interface.
 pub fn compute_closeness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) -> Vec<u32> {
     let start = Instant::now();
     num_threads = num_threads.clamp(MIN_NUM_THREADS, MAX_NUM_THREADS);
-    println!("\ncompute_closeness: num_threads {:?}", num_threads);
 
     let num_nodes = indices.len();
 
@@ -95,8 +104,6 @@ pub fn compute_closeness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) 
             total_path_length[i] += t[i];
         }
     }
-
-    println!("\ncompute_closeness: done {:?}", start.elapsed());
 
     total_path_length
 }
