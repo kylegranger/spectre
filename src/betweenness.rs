@@ -4,7 +4,6 @@ use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
     thread,
-    time::Instant,
 };
 
 use crate::graph::GraphIndex;
@@ -69,7 +68,6 @@ fn betweenness_for_node(
 /// if no more nodes, exits
 /// returning betweenness
 fn betweenness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>>>) -> Vec<f64> {
-    let start = Instant::now();
     let indices = &aindices;
     let num_nodes = indices.len();
 
@@ -108,7 +106,6 @@ pub fn compute_betweenness(
     mut num_threads: usize,
     normalize: bool,
 ) -> Vec<f64> {
-    let start = Instant::now();
     num_threads = num_threads.clamp(MIN_NUM_THREADS, MAX_NUM_THREADS);
 
     let num_nodes = indices.len();

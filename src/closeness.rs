@@ -4,7 +4,6 @@ use std::{
     collections::VecDeque,
     sync::{Arc, Mutex},
     thread,
-    time::Instant,
 };
 
 use crate::graph::GraphIndex;
@@ -44,7 +43,6 @@ fn closeness_for_node(index: usize, indices: &Vec<Vec<GraphIndex>>, total_path_l
 /// if no more nodes, exits
 /// returning total path lengths
 fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>>>) -> Vec<u32> {
-    let start = Instant::now();
     let indices = &aindices;
     let num_nodes = indices.len();
 
@@ -79,7 +77,6 @@ fn closeness_task(acounter: Arc<Mutex<usize>>, aindices: Arc<Vec<Vec<GraphIndex>
 /// - added the results together, and returning them
 /// It public for graph, but is not exposed in the public library interface.
 pub fn compute_closeness(indices: Vec<Vec<GraphIndex>>, mut num_threads: usize) -> Vec<u32> {
-    let start = Instant::now();
     num_threads = num_threads.clamp(MIN_NUM_THREADS, MAX_NUM_THREADS);
 
     let num_nodes = indices.len();
